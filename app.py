@@ -153,7 +153,15 @@ def run_full_processing(df_30, df_7, df_3):
     df_discontinued = pd.DataFrame(columns=["ProductID", "IsEndOfLife", "Notes"])
 
     # ---------------------------
-    # E) Write All to In-Memory Excel
+    # E) Round all numeric columns to 2 decimals
+    # ---------------------------
+    # This ensures columns like ROI, velocity, etc. only show 2 decimals in final DataFrame.
+    for df_ in [df_30_cleaned, df_unprofitable, df_downward_velocity, df_discontinued]:
+        numeric_cols = df_.select_dtypes(include=["float", "int"]).columns
+        df_[numeric_cols] = df_[numeric_cols].round(2)
+
+    # ---------------------------
+    # F) Write All to In-Memory Excel
     # ---------------------------
     output_buffer = BytesIO()
     with pd.ExcelWriter(output_buffer, engine="xlsxwriter") as writer:
@@ -179,15 +187,12 @@ def run_full_processing(df_30, df_7, df_3):
             ws.autofilter(0, 0, rows, cols - 1)
 
             if rows > 0:
-                # We create text series for each column ignoring the header
-                # and strip whitespace.
                 col_a_idx = 0
                 col_b_idx = 1
 
                 # Column A
                 data_col_a = df.iloc[:, col_a_idx].astype(str).str.strip()
                 max_len_a = 0 if data_col_a.empty else data_col_a.str.len().max()
-                # No +2 => EXACT
                 ws.set_column(col_a_idx, col_a_idx, max_len_a)
 
                 # Column B
@@ -219,24 +224,42 @@ def run_full_processing(df_30, df_7, df_3):
         green_fill = workbook.add_format({'bg_color': '#C6EFCE', 'font_color': '#006100'})
         red_fill   = workbook.add_format({'bg_color': '#FFC7CE', 'font_color': '#9C0006'})
 
-        # 3-color scale for 30-day ROI (Column I)
+        # 3-color scale for 30-day ROI (Column I) on main, unprofitable, downward
         worksheet_main.conditional_format('I2:I1000', {
             'type': '3_color_scale',
-            'min_value': 10, 'min_type': 'num', 'min_color': '#FF6666',
-            'mid_value': 15, 'mid_type': 'num', 'mid_color': '#FFD580',
-            'max_value': 20, 'max_type': 'num', 'max_color': '#90EE90'
+            'min_value': 10,
+            'min_type': 'num',
+            'min_color': '#FF6666',
+            'mid_value': 15,
+            'mid_type': 'num',
+            'mid_color': '#FFD580',
+            'max_value': 20,
+            'max_type': 'num',
+            'max_color': '#90EE90'
         })
         worksheet_unprofitable.conditional_format('I2:I1000', {
             'type': '3_color_scale',
-            'min_value': 0, 'min_type': 'num', 'min_color': '#FF0000',
-            'mid_value': 2.5, 'mid_type': 'num', 'mid_color': '#FFA07A',
-            'max_value': 5, 'max_type': 'num', 'max_color': '#FFFF99'
+            'min_value': 0,
+            'min_type': 'num',
+            'min_color': '#FF0000',
+            'mid_value': 2.5,
+            'mid_type': 'num',
+            'mid_color': '#FFA07A',
+            'max_value': 5,
+            'max_type': 'num',
+            'max_color': '#FFFF99'
         })
         worksheet_downward.conditional_format('I2:I1000', {
             'type': '3_color_scale',
-            'min_value': 10, 'min_type': 'num', 'min_color': '#FF6666',
-            'mid_value': 15, 'mid_type': 'num', 'mid_color': '#FFD580',
-            'max_value': 20, 'max_type': 'num', 'max_color': '#90EE90'
+            'min_value': 10,
+            'min_type': 'num',
+            'min_color': '#FF6666',
+            'mid_value': 15,
+            'mid_type': 'num',
+            'mid_color': '#FFD580',
+            'max_value': 20,
+            'max_type': 'num',
+            'max_color': '#90EE90'
         })
 
         # ROI_7_Days (K) & ROI_3_Days (L) vs. ROI (I)
@@ -354,3 +377,4 @@ if st.button("Process Files"):
 
         except Exception as e:
             st.error(f"Error processing files: {e}")
+
